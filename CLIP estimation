@@ -1,0 +1,51 @@
+# Checking how perfect these images are
+import torch
+from PIL import Image
+from transformers import CLIPProcessor, CLIPModel
+
+# ----- Load CLIP model -----
+def load_clip_model():
+    model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    return model, processor
+
+# ----- Compute similarity scores -----
+def compute_clip_scores(images, prompts, model, processor):
+    """
+    Computes CLIP similarity scores between images and prompts.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
+
+    # Preprocess and move tensors to device
+    inputs = processor(text=prompts, images=images, return_tensors="pt", padding=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+
+    # Compute image-text similarity
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits_per_image = outputs.logits_per_image  # shape: [num_images, num_texts]
+        probs = logits_per_image.softmax(dim=1)
+
+    return probs.cpu()
+
+# ----- Example Usage -----
+if __name__ == "__main__":
+    # Use your already-loaded images and prompts
+    # Example:
+    # images = [Image.open("img1.png"), Image.open("img2.png")]
+    # prompts = ["a sunny beach", "a snowy mountain"]
+
+    # Extract images and prompts from the generated_images list
+    image_list = [img for prompt, img in generated_images]
+    prompt_list = [prompt for prompt, img in generated_images]
+
+
+    model, processor = load_clip_model()
+    scores = compute_clip_scores(image_list, prompt_list, model, processor)
+
+    # Print scores
+    for i, image_scores in enumerate(scores):
+        print(f"\nImage {i + 1}:")
+        for j, score in enumerate(image_scores):
+            print(f"  '{prompt_list[j]}': {score:.4f}")
